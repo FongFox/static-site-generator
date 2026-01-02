@@ -1,4 +1,4 @@
-from textnode import TextNode, TextType, split_nodes_delimiter
+from textnode import TextNode, TextType
 
 
 def main():

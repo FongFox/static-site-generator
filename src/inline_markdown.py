@@ -1,3 +1,5 @@
+import re
+
 from htmlnode import LeafNode
 from textnode import TextNode, TextType
 
@@ -37,3 +39,19 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
                 continue
             node_list.append(TextNode(text=part, text_type=text_type))
     return node_list
+
+
+def extract_markdown_images(text):
+    # TODO: dùng regex để tìm và trả về list các (alt, url)
+    return re.findall(r"!\[([^]]+)\]\(([^)]+)\)", text)
+
+
+def extract_markdown_links(text):
+    # TODO: tương tự nhưng cho link thường
+    return re.findall(r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)", text)
+
+
+# if __name__ == "__main__":
+#     sample_text = "This is text with a ![rick roll](https://i.imgur.com/aKaOqIh.gif) and [to boot dev](https://www.boot.dev)"
+#     print("Images:", extract_markdown_images(sample_text))
+#     print("Links:", extract_markdown_links(sample_text))

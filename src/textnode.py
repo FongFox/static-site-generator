@@ -1,8 +1,4 @@
-from ast import Continue
 from enum import Enum
-from pydoc import text
-
-from htmlnode import LeafNode
 
 
 class TextType(Enum):

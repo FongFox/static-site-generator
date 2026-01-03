@@ -28,7 +28,7 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
     node_list = []
     for old_node in old_nodes:
         if old_node.text_type != TextType.TEXT:
-            node_list.append(TextNode(text=old_node.text, text_type=old_node.text_type))
+            node_list.append(old_node)
             continue
 
         split_parts = old_node.text.split(delimiter)
@@ -45,7 +45,6 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
 
 
 def extract_markdown_images(text):
-    # TODO: dùng regex để tìm và trả về list các (alt, url)
     return re.findall(r"!\[([^]]+)\]\(([^)]+)\)", text)
 
 
@@ -79,7 +78,6 @@ def split_nodes_image(old_nodes):
 
 
 def extract_markdown_links(text):
-    # TODO: tương tự nhưng cho link thường
     return re.findall(r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)", text)
 
 
@@ -113,9 +111,20 @@ def split_nodes_link(old_nodes):
     return node_list
 
 
-# if __name__ == "__main__":
-#     node = TextNode(
-#         "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png) and another ![second image](https://i.imgur.com/3elNhQu.png)",
-#         TextType.TEXT,
-#     )
-#     new_nodes = split_nodes_image([node])
+def text_to_textnodes(text):
+    nodes = [TextNode(text=text, text_type=TextType.TEXT)]
+
+    nodes = split_nodes_image(nodes)
+    nodes = split_nodes_link(nodes)
+
+    nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD)
+    nodes = split_nodes_delimiter(nodes, "_", TextType.ITALIC)
+    nodes = split_nodes_delimiter(nodes, "`", TextType.CODE)
+
+    return nodes
+
+
+if __name__ == "__main__":
+    text = "This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
+    new_nodes = text_to_textnodes(text)
+    # print(new_nodes)

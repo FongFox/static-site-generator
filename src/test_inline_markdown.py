@@ -3,6 +3,7 @@ import unittest
 from inline_markdown import (
     extract_markdown_images,
     extract_markdown_links,
+    markdown_to_blocks,
     split_nodes_delimiter,
     split_nodes_image,
     split_nodes_link,
@@ -108,6 +109,45 @@ class TestInlineMarkdown(unittest.TestCase):
             TextNode("link", TextType.LINK, "https://boot.dev"),
         ]
         self.assertEqual(new_nodes, expected)
+
+    def test_markdown_to_blocks(self):
+        md = """
+This is **bolded** paragraph
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+        """
+
+        blocks = markdown_to_blocks(md)
+        expected = [
+            "This is **bolded** paragraph",
+            "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+            "- This is a list\n- with items",
+        ]
+        self.assertEqual(blocks, expected)
+
+    def test_markdown_to_blocks_with_header(self):
+        md = """
+# This is a heading
+
+This is a paragraph of text.
+It has some **bold** and _italic_ words inside of it.
+
+- This is the first list item in a list block
+- This is a list item
+- This is another list item
+        """
+
+        blocks = markdown_to_blocks(md)
+        expected = [
+            "# This is a heading",
+            "This is a paragraph of text.\nIt has some **bold** and _italic_ words inside of it.",
+            "- This is the first list item in a list block\n- This is a list item\n- This is another list item",
+        ]
+        self.assertEqual(blocks, expected)
 
 
 if __name__ == "__main__":

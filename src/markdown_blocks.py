@@ -1,4 +1,9 @@
+import re
 from enum import Enum
+
+from htmlnode import ParentNode
+from inline_markdown import text_node_to_html_node, text_to_textnodes
+from textnode import TextNode, TextType
 
 
 class BlockType(Enum):
@@ -67,5 +72,123 @@ def block_to_block_type(md_txt_block):
     return BlockType.PARAGRAPH
 
 
-# if __name__ == "__main__":
-#     pass
+def convert_line_type_to_html_tag(line_type, line=None):
+    match line_type:
+        case BlockType.PARAGRAPH:
+            return "p"
+        case BlockType.HEADING:
+            if line is not None:
+                heading_counter = 0
+                for char in line:
+                    if char == "#":
+                        heading_counter += 1
+                    else:
+                        break
+                return f"h{heading_counter}"
+            else:
+                raise TypeError("Invalid line value parameter")
+        case BlockType.CODE:
+            return "pre"
+        case BlockType.QUOTE:
+            return "blockquote"
+        case BlockType.UNORDERED_LIST:
+            return "ul"
+        case BlockType.ORDERED_LIST:
+            return "ol"
+        case _:
+            raise Exception("Invalid line type")
+
+
+def handle_clean_line(line_type, line):
+    if line_type == BlockType.HEADING:
+        return line.lstrip("#").strip()
+    elif line_type == BlockType.QUOTE:
+        return line.lstrip(">").strip()
+    elif line_type == BlockType.CODE:
+        result = line.strip()
+        if result.startswith("```"):
+            result = result[3:]
+
+        if result.endswith("```"):
+            result = result[:-3]
+
+        return result.strip() + "\n"
+    elif line_type == BlockType.PARAGRAPH:
+        return line.replace("\n", " ")
+    else:
+        return line
+
+
+def clean_inner_line(inner_line):
+    # Pattern explanation:
+    # ^      - Matches the start of the line
+    # [\*\-]? - Optionally matches a literal '*' or '-'
+    # \d+\.?  - Optionally matches one or more digits followed by an optional literal '.'
+    # \s*    - Matches zero or more whitespace characters
+    pattern = r"^[\*\-]?\d+\.?\s*"
+
+    # Substitute the pattern with an empty string
+    cleaned_line = re.sub(pattern, "", inner_line)
+
+    # Strip any remaining leading/trailing whitespace that the regex might have missed
+    return cleaned_line.strip()
+
+
+def markdown_to_html_node(md):
+    lines = markdown_to_blocks(md)
+    html_nodes = []
+
+    for line in lines:
+        line_type = block_to_block_type(line)
+        html_type = convert_line_type_to_html_tag(line_type, line)
+        clean_line = handle_clean_line(line_type, line)
+
+        if line_type == BlockType.CODE:
+            text_node = TextNode(clean_line, TextType.TEXT)
+            code_html = text_node_to_html_node(text_node)
+
+            code_node = ParentNode(tag="code", children=[code_html])
+
+            parent_node = ParentNode(tag=html_type, children=[code_node])
+            html_nodes.append(parent_node)
+        elif (
+            line_type == BlockType.UNORDERED_LIST or line_type == BlockType.ORDERED_LIST
+        ):
+            inner_lines = line.splitlines()
+            li_nodes = []
+
+            for inner_line in inner_lines:
+                cleaned_inner_line = clean_inner_line(inner_line)
+                text_node_list = text_to_textnodes(cleaned_inner_line)
+                children = []
+
+                for text_node in text_node_list:
+                    html_node = text_node_to_html_node(text_node)
+                    children.append(html_node)
+
+                li_node = ParentNode(tag="li", children=children)
+                li_nodes.append(li_node)
+
+            parent_node = ParentNode(tag=html_type, children=li_nodes)
+            html_nodes.append(parent_node)
+        else:
+            text_node_list = text_to_textnodes(clean_line)
+            children = []
+
+            for text_node in text_node_list:
+                html_node = text_node_to_html_node(text_node)
+                children.append(html_node)
+
+            parent_node = ParentNode(tag=html_type, children=children)
+            html_nodes.append(parent_node)
+
+    return ParentNode(tag="div", children=html_nodes)
+
+
+if __name__ == "__main__":
+    md = """
+This is **bolded** paragraph text in a p tag here
+
+This is another paragraph with _italic_ text and `code` here
+    """
+    markdown_to_html_node(md)

@@ -7,6 +7,17 @@ from textnode import TextNode, TextType
 
 
 class BlockType(Enum):
+    """
+    Markdown block types.
+
+    PARAGRAPH: Regular text
+    HEADING: # headings (h1-h6)
+    CODE: ``` code blocks
+    QUOTE: > blockquotes
+    UNORDERED_LIST: - bullet lists
+    ORDERED_LIST: 1. numbered lists
+    """
+
     PARAGRAPH = "paragraph"
     HEADING = "heading"
     CODE = "code"
@@ -16,6 +27,22 @@ class BlockType(Enum):
 
 
 def markdown_to_blocks(markdown):
+    """
+    Splits markdown into blocks (separated by blank lines).
+
+    Args:
+        markdown (str): Full markdown document
+
+    Returns:
+        list[str]: List of trimmed, non-empty blocks
+
+    Example:
+        >>> markdown_to_blocks("# Title\\n\\nParagraph")
+        ['# Title', 'Paragraph']
+
+    Note:
+        Blocks separated by \\n\\n (double newline).
+    """
     str_list = []
 
     temp_list = markdown.split("\n\n")
@@ -28,6 +55,15 @@ def markdown_to_blocks(markdown):
 
 
 def is_unordered_list(lines):
+    """
+    Checks if all lines start with "- ".
+
+    Args:
+        lines (list[str]): Lines to check
+
+    Returns:
+        bool: True if all lines start with "- "
+    """
     for line in lines:
         if not line.startswith("- "):
             return False
@@ -35,6 +71,18 @@ def is_unordered_list(lines):
 
 
 def is_ordered_list(lines):
+    """
+    Checks if lines form ordered list (1. 2. 3. ...).
+
+    Args:
+        lines (list[str]): Lines to check
+
+    Returns:
+        bool: True if consecutive numbers starting from 1
+
+    Note:
+        Must be 1, 2, 3... in order. Not 1, 3, 5.
+    """
     for index, line in enumerate(lines):
         expected_prefix = f"{index + 1}. "
         if not line.startswith(expected_prefix):
@@ -43,6 +91,23 @@ def is_ordered_list(lines):
 
 
 def block_to_block_type(md_txt_block):
+    """
+    Determines block type of markdown block.
+
+    Args:
+        md_txt_block (str): Markdown block (can be multi-line)
+
+    Returns:
+        BlockType: Type of the block
+
+    Check order:
+        1. CODE (starts/ends with ```)
+        2. HEADING (starts with #)
+        3. QUOTE (starts with >)
+        4. UNORDERED_LIST (all lines "- ")
+        5. ORDERED_LIST (lines "1. 2. 3. ...")
+        6. PARAGRAPH (default)
+    """
     md_txt_block = md_txt_block.strip()
     lines = md_txt_block.split("\n")
     first_line = lines[0]
@@ -73,6 +138,27 @@ def block_to_block_type(md_txt_block):
 
 
 def convert_line_type_to_html_tag(line_type, line=None):
+    """
+    Converts BlockType to HTML tag name.
+
+    Args:
+        line_type (BlockType): Block type
+        line (str, optional): Needed for HEADING to count #
+
+    Returns:
+        str: HTML tag name
+
+    Mapping:
+        PARAGRAPH → "p"
+        HEADING → "h1" to "h6" (counts #)
+        CODE → "pre"
+        QUOTE → "blockquote"
+        UNORDERED_LIST → "ul"
+        ORDERED_LIST → "ol"
+
+    Raises:
+        TypeError: If HEADING without line parameter
+    """
     match line_type:
         case BlockType.PARAGRAPH:
             return "p"
@@ -100,6 +186,23 @@ def convert_line_type_to_html_tag(line_type, line=None):
 
 
 def handle_clean_line(line_type, line):
+    """
+    Removes markdown syntax from content.
+
+    Args:
+        line_type (BlockType): Type of block
+        line (str): Content to clean
+
+    Returns:
+        str: Cleaned content
+
+    Processing:
+        HEADING: Remove leading #
+        QUOTE: Remove leading >
+        CODE: Remove ```, add \\n at end
+        PARAGRAPH: Replace \\n with space
+        Other: Return unchanged
+    """
     if line_type == BlockType.HEADING:
         return line.lstrip("#").strip()
     elif line_type == BlockType.QUOTE:
@@ -120,21 +223,68 @@ def handle_clean_line(line_type, line):
 
 
 def clean_inner_line(inner_line):
-    # Pattern explanation:
-    # ^      - Matches the start of the line
-    # [\*\-]? - Optionally matches a literal '*' or '-'
-    # \d+\.?  - Optionally matches one or more digits followed by an optional literal '.'
-    # \s*    - Matches zero or more whitespace characters
-    pattern = r"^[\*\-]?\d+\.?\s*"
+    """
+    Removes list markers from line start.
 
-    # Substitute the pattern with an empty string
-    cleaned_line = re.sub(pattern, "", inner_line)
+    - "- " or "* " for unordered lists
+    - "1. ", "2. " ... for ordered lists
+    """
+    line = inner_line.lstrip()  # bỏ space thừa bên trái cho chắc
 
-    # Strip any remaining leading/trailing whitespace that the regex might have missed
-    return cleaned_line.strip()
+    if line.startswith("- ") or line.startswith("* "):
+        return line[2:].strip()
+
+    # xử lý dạng "1. text", "2. text"
+    match = re.match(r"^\d+\.\s*(.*)$", line)
+    if match:
+        return match.group(1).strip()
+
+    # nếu không khớp gì, trả lại như cũ
+    return line.strip()
 
 
 def markdown_to_html_node(md):
+    """
+    Main function: converts full markdown document to HTMLNode tree.
+
+    This is the primary markdown-to-HTML converter. Handles all block
+    types and inline markdown.
+
+    Args:
+        md (str): Complete markdown document
+
+    Returns:
+        ParentNode: Root <div> containing all HTML
+
+    Processing:
+        1. Split markdown into blocks
+        2. For each block:
+           - Detect type (heading, list, code, etc)
+           - Convert to appropriate HTML tag
+           - Clean markdown syntax
+           - Parse inline markdown (bold, links, etc)
+           - Build ParentNode tree
+        3. Wrap all in <div> root
+
+    Special handling:
+        CODE: Wraps in <pre><code>...</code></pre>
+        LISTS: Creates <li> for each item, parses inline markdown
+        Others: Parses inline markdown, wraps in tag
+
+    Example:
+        >>> md = "# Title\\n\\nThis is **bold**"
+        >>> node = markdown_to_html_node(md)
+        >>> node.to_html()
+        '<div><h1>Title</h1><p>This is <b>bold</b></p></div>'
+
+    Note:
+        This function ties together all the other modules:
+        - Uses markdown_to_blocks() to split
+        - Uses block_to_block_type() to classify
+        - Uses text_to_textnodes() for inline parsing
+        - Uses text_node_to_html_node() to convert to HTML
+        - Builds tree with ParentNode and LeafNode
+    """
     lines = markdown_to_blocks(md)
     html_nodes = []
 
@@ -191,4 +341,4 @@ This is **bolded** paragraph text in a p tag here
 
 This is another paragraph with _italic_ text and `code` here
     """
-    markdown_to_html_node(md)
+    print(markdown_to_html_node(md))

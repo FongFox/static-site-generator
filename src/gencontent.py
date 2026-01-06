@@ -135,6 +135,42 @@ def generate_page(from_path, template_path, dest_path):
         f.write(page)
 
 
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    """
+    Recursively generate HTML files from all markdown files in a content directory.
+
+    Args:
+        dir_path_content (str): Path to the source content directory that contains
+            markdown files and/or subdirectories.
+        template_path (str): Path to the HTML template file used to wrap the
+            generated HTML content.
+        dest_dir_path (str): Path to the destination directory where the generated
+            HTML files (and mirrored directory structure) will be written.
+
+    Behavior:
+        - Walks through every entry in dir_path_content.
+        - If an entry is a subdirectory, creates a corresponding subdirectory
+          under dest_dir_path and calls this function recursively.
+        - If an entry is a markdown file (ending with ".md"), generates a
+          corresponding ".html" file in dest_dir_path using generate_page,
+          preserving the directory structure of the content tree.
+    """
+    entries = os.listdir(dir_path_content)
+
+    for name in entries:
+        src_path = os.path.join(dir_path_content, name)
+        if not os.path.isfile(src_path):
+            new_dest_dir = os.path.join(dest_dir_path, name)
+            if not os.path.exists(new_dest_dir):
+                os.mkdir(new_dest_dir)
+            generate_pages_recursive(src_path, template_path, new_dest_dir)
+        else:
+            if name.endswith(".md"):
+                new_name = name.replace(".md", ".html")
+                new_dest_path = os.path.join(dest_dir_path, new_name)
+                generate_page(src_path, template_path, new_dest_path)
+
+
 if __name__ == "__main__":
     generate_page(
         from_path="content/index.md",

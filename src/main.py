@@ -1,10 +1,10 @@
 import os
 import shutil
 
-from gencontent import copy_directory_contents, generate_page, generate_pages_recursive
+from gencontent import copy_directory_contents, generate_pages_recursive
 
 
-def main():
+def main(base_path):
     """
     Entry point of the static site generator.
 
@@ -16,13 +16,27 @@ def main():
         - Writes the generated HTML files into the 'public' directory while
           preserving the content directory structure.
     """
-    if os.path.exists("public"):
-        shutil.rmtree("public")
+    # if os.path.exists("public"):
+    #     shutil.rmtree("public")
 
-    copy_directory_contents("static", "public")
+    # copy_directory_contents("static", "public")
 
-    generate_pages_recursive("content", "template.html", "public")
+    # generate_pages_recursive("content", "template.html", "public")
+    #
+    if os.path.exists("docs"):
+        shutil.rmtree("docs")
+
+    copy_directory_contents("static", "docs")
+
+    generate_pages_recursive("content", "template.html", "docs", base_path)
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if len(sys.argv) > 1:
+        base_path = sys.argv[1]
+    else:
+        base_path = "/"
+
+    main(base_path)

@@ -91,7 +91,7 @@ def extract_title(markdown: str) -> str:
     raise Exception("No h1 title found in markdown")
 
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, base_path=None):
     """
     Generate a full HTML page from a markdown file and an HTML template.
 
@@ -124,8 +124,13 @@ def generate_page(from_path, template_path, dest_path):
     html_content = root.to_html()
     title = extract_title(markdown)
 
+    if base_path is None:
+        base_path = "/"
+
     page = template.replace("{{ Title }}", title)
     page = page.replace("{{ Content }}", html_content)
+    page = page.replace('href="/"', f'href="{base_path}')
+    page = page.replace('src="/"', f'src="{base_path}')
 
     dir_path = os.path.dirname(dest_path)
     if dir_path:
@@ -135,7 +140,9 @@ def generate_page(from_path, template_path, dest_path):
         f.write(page)
 
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(
+    dir_path_content, template_path, dest_dir_path, base_path=None
+):
     """
     Recursively generate HTML files from all markdown files in a content directory.
 
@@ -163,17 +170,17 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
             new_dest_dir = os.path.join(dest_dir_path, name)
             if not os.path.exists(new_dest_dir):
                 os.mkdir(new_dest_dir)
-            generate_pages_recursive(src_path, template_path, new_dest_dir)
+            generate_pages_recursive(src_path, template_path, new_dest_dir, base_path)
         else:
             if name.endswith(".md"):
                 new_name = name.replace(".md", ".html")
                 new_dest_path = os.path.join(dest_dir_path, new_name)
-                generate_page(src_path, template_path, new_dest_path)
+                generate_page(src_path, template_path, new_dest_path, base_path)
 
 
-if __name__ == "__main__":
-    generate_page(
-        from_path="content/index.md",
-        template_path="template.html",
-        dest_path="public/index.html",
-    )
+# if __name__ == "__main__":
+#     generate_page(
+#         from_path="content/index.md",
+#         template_path="template.html",
+#         dest_path="public/index.html",
+#     )

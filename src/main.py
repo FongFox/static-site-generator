@@ -6,14 +6,20 @@ from gencontent import copy_directory_contents, generate_pages_recursive
 
 def main(base_path):
     """
-    Entry point of the static site generator.
+    Entry point for the static site generator.
+
+    Args:
+        base_path: The base URL path where the site will be served.
+            - "/" for local development (root)
+            - "/REPO_NAME/" for GitHub Pages under https://USERNAME.github.io/REPO_NAME/
 
     Behavior:
-        - Deletes the existing 'public' directory if it exists.
-        - Copies all static assets from the 'static' directory into 'public'.
-        - Recursively generates HTML pages for every markdown file found in
-          the 'content' directory using 'template.html'.
-        - Writes the generated HTML files into the 'public' directory while
+        - Deletes the existing 'docs' directory if it exists.
+        - Copies all static assets from 'static' into 'docs'.
+        - Recursively generates HTML pages from the 'content' directory
+          using 'template.html'.
+        - Rewrites internal href/src attributes to be prefixed with base_path.
+        - Writes the generated HTML files into the 'docs' directory while
           preserving the content directory structure.
     """
     # if os.path.exists("public"):

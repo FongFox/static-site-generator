@@ -124,11 +124,12 @@ def generate_page(from_path, template_path, dest_path, base_path=None):
     html_content = root.to_html()
     title = extract_title(markdown)
 
+    page = template.replace("{{ Title }}", title)
+    page = page.replace("{{ Content }}", html_content)
+
     if base_path is None:
         base_path = "/"
 
-    page = template.replace("{{ Title }}", title)
-    page = page.replace("{{ Content }}", html_content)
     page = page.replace('href="/"', f'href="{base_path}')
     page = page.replace('src="/"', f'src="{base_path}')
 
